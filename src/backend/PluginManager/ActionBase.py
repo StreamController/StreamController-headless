@@ -12,7 +12,6 @@ from rpyc.core.protocol import Connection
 from rpyc.core import netref
 
 # Import own modules
-from src.Signals.Signals import Signal
 from src.backend.PageManagement.Page import Page
 from src.backend.DeckManagement.HelperMethods import is_image, is_video
 from src.backend.DeckManagement.DeckController import KeyImage, KeyVideo, BackgroundImage, BackgroundVideo, KeyLabel
@@ -21,7 +20,6 @@ from src.backend.DeckManagement.DeckController import KeyImage, KeyVideo, Backgr
 import globals as gl
 
 # Import locale manager
-from locales.LocaleManager import LocaleManager
 
 # Import typing
 from typing import TYPE_CHECKING
@@ -242,9 +240,12 @@ class ActionBase(rpyc.Service):
         self.page.set_settings_for_action(self, settings=settings, coords = self.page_coords)
         self.page.save()
 
-    def connect(self, signal:Signal = None, callback: callable = None) -> None:
-        # Connect
-        gl.signal_manager.connect_signal(signal = signal, callback = callback)
+    def connect(self, *args, **kwargs):
+        return
+
+    # def connect(self, signal:Signal = None, callback: callable = None) -> None:
+    #     # Connect
+    #     gl.signal_manager.connect_signal(signal = signal, callback = callback)
 
     def get_own_key(self) -> "ControllerKey":
         return self.deck_controller.keys[self.key_index]

@@ -19,7 +19,8 @@ Shoutout to Dean Camera alias abcminiuser for his amazing work!
 """
 from PIL import Image, ImageOps
 from StreamDeck.ImageHelpers import PILHelper
-
+import gi
+gi.require_version('GdkPixbuf', '2.0')
 from gi.repository import GLib, GdkPixbuf
 
 def create_full_deck_sized_image(deck, image_filename = None, image = None):

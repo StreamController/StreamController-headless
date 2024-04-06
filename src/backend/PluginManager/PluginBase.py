@@ -213,6 +213,7 @@ class PluginBase(rpyc.Service):
         return True
     
     def request_dbus_permission(self, name: str, bus: str="session", description: str = None) -> None:
+        return
         """
         name: The name of the bus
         bus: The bus type session or system

@@ -39,9 +39,6 @@ from gi.repository import GLib
 from src.backend.PluginManager.PluginBase import PluginBase
 from src.backend.DeckManagement.HelperMethods import recursive_hasattr
 
-# Import signals
-from src.Signals import Signals
-
 # Import globals
 import globals as gl
 
@@ -616,8 +613,6 @@ class StoreBackend:
                     # Reload page to send new on_ready events
                     controller.load_page(controller.active_page)
 
-        # Notify plugin actions
-        gl.signal_manager.trigger_signal(signal=Signals.PluginInstall, id=plugin_dict["id"])
 
         log.success(f"Plugin {plugin_dict['id']} installed successfully under: {local_path} with sha: {plugin_dict['commit_sha']}")
     def uninstall_plugin(self, plugin_id:str, remove_from_pages:bool = False) -> bool:

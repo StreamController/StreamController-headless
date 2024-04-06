@@ -23,9 +23,6 @@ from loguru import logger as log
 
 import globals as gl
 
-from src.windows.Permissions.FlatpakPermissionRequest import FlatpakPermissionRequestWindow
-
-
 class FlatpakPermissionManager:
     def __init__(self):
         self.portal = Xdp.Portal.new()

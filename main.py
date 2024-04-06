@@ -31,9 +31,7 @@ from StreamDeck.DeviceManager import DeviceManager
 from dbus.mainloop.glib import DBusGMainLoop
 
 # Import own modules
-from src.app import App
 from src.backend.DeckManagement.DeckManager import DeckManager
-from locales.LocaleManager import LocaleManager
 from src.backend.MediaManager import MediaManager
 from src.backend.AssetManagerBackend import AssetManagerBackend
 from src.backend.PageManagement.PageManager import PageManager
@@ -42,12 +40,10 @@ from src.backend.PluginManager.PluginManager import PluginManager
 from src.backend.DeckManagement.HelperMethods import get_sys_args_without_param
 from src.backend.IconPackManagement.IconPackManager import IconPackManager
 from src.backend.WallpaperPackManagement.WallpaperPackManager import WallpaperPackManager
-from src.windows.Store.StoreBackend import StoreBackend, NoConnectionError
-from autostart import setup_autostart
-from src.Signals.SignalManager import SignalManager
 from src.backend.WindowGrabber.WindowGrabber import WindowGrabber
 from src.backend.GnomeExtensions import GnomeExtensions
 from src.backend.PermissionManagement.FlatpakPermissionManager import FlatpakPermissionManager
+from src.backend.StoreBackend import StoreBackend
 
 # Import globals
 import globals as gl
@@ -63,14 +59,6 @@ def config_logger():
     log.add(sys.stderr, level="TRACE")
     log.add(write_logs, level="TRACE")
 
-class Main:
-    def __init__(self, application_id, deck_manager):
-        # Launch gtk application
-        self.app = App(application_id=application_id, deck_manager=deck_manager)
-
-        gl.app = self.app
-
-        self.app.run(gl.argparser.parse_args().app_args)
 
 @log.catch
 def load():
@@ -79,7 +67,6 @@ def load():
     log.info("Loading app")
     gl.deck_manager = DeckManager()
     gl.deck_manager.load_decks()
-    gl.main = Main(application_id="com.core447.StreamController", deck_manager=gl.deck_manager)
 
 @log.catch
 def create_cache_folder():
@@ -91,18 +78,10 @@ def create_global_objects():
     gl.argparser.add_argument("-b", help="Open in background", action="store_true")
     gl.argparser.add_argument("app_args", nargs="*")
 
-    # Setup locales
-    gl.lm = LocaleManager(locales_path="locales")
-    gl.lm.set_to_os_default()
-    gl.lm.set_fallback_language("en_US")
-
-    gl.flatpak_permission_manager = FlatpakPermissionManager()
 
     gl.gnome_extensions = GnomeExtensions()
 
     gl.settings_manager = SettingsManager()
-
-    gl.signal_manager = SignalManager()
 
     gl.media_manager = MediaManager()
     gl.asset_manager_backend = AssetManagerBackend()
@@ -183,12 +162,16 @@ if __name__ == "__main__":
 
     reset_all_decks()
 
-    setup_autostart()
-
     create_global_objects()
     create_cache_folder()
     threading.Thread(target=update_assets, name="update_assets").start()
     load()
+
+    while True:
+        try:
+            time.sleep(1)
+        except KeyboardInterrupt:
+            break
 
 
 log.trace("Reached end of main.py")

@@ -45,15 +45,11 @@ from src.backend.DeckManagement.Subclasses.ScreenSaver import ScreenSaver
 import psutil
 process = psutil.Process()
 
-# Import signals
-from src.Signals import Signals
 
 # Import typing
 from typing import TYPE_CHECKING
 
-from src.windows.mainWindow.elements.KeyGrid import KeyButton, KeyGrid
 if TYPE_CHECKING:
-    from src.windows.mainWindow.elements.DeckStackChild import DeckStackChild
     from src.backend.DeckManagement.DeckManager import DeckManager
     from src.backend.PluginManager.ActionBase import ActionBase
 
@@ -107,7 +103,6 @@ class MediaPlayerThread(threading.Thread):
         self.fps: list[float] = []
         self.old_warning_state = False
 
-        self.show_fps_warnings = gl.settings_manager.get_app_settings().get("warnings", {}).get("enable-fps-warnings", True)
 
     def run(self):
         self.running = True
@@ -141,7 +136,6 @@ class MediaPlayerThread(threading.Thread):
             end = time.time()
             # print(f"possible FPS: {1 / (end - start)}")
             self.append_fps(1 / (end - start))
-            self.update_low_fps_warning()
             wait = max(0, 1/self.FPS - (end - start))
             time.sleep(wait)
 
@@ -158,33 +152,6 @@ class MediaPlayerThread(threading.Thread):
     def get_median_fps(self) -> float:
         return statistics.median(self.fps)
     
-    def update_low_fps_warning(self):
-        if not self.show_fps_warnings:
-            return
-        
-        show_warning = self.get_median_fps() < self.FPS * 0.8
-        if self.old_warning_state == show_warning:
-            return
-        self.old_warning_state = show_warning
-
-        self.set_banner_revealed(show_warning)
-
-
-    def set_show_fps_warnings(self, state: bool) -> None:
-        self.show_fps_warnings = state
-        if state:
-            self.old_warning_state = False
-        else:
-            self.set_banner_revealed(False)
-
-    def set_banner_revealed(self, state: bool) -> None:
-        deck_stack_child: "DeckStackChild" = self.deck_controller.get_own_deck_stack_child()
-        if deck_stack_child is None:
-            return
-        
-        # deck_stack_child.low_fps_banner.set_revealed(show_warning)
-        GLib.idle_add(deck_stack_child.low_fps_banner.set_revealed, state)
-
 
     def stop(self) -> None:
         self._stop = True
@@ -243,9 +210,6 @@ class DeckController:
             del self
             return
         
-        self.own_deck_stack_child: "DeckStackChild" = None
-        self.own_key_grid: "KeyGridChild" = None
-
         self.screen_saver = ScreenSaver(deck_controller=self)
 
         self.spacing = (36, 36)
@@ -294,8 +258,6 @@ class DeckController:
         native_image = PILHelper.to_native_key_format(self.deck, image.convert("RGB"))
 
         self.media_player.add_image_task(index, native_image)
-
-        self.keys[index].set_ui_key_image(image)
 
     def update_all_keys(self):
         start = time.time()
@@ -519,8 +481,6 @@ class DeckController:
         # self.update_all_keys()
         self.media_player.add_task(self.update_all_keys)
 
-        # Notify plugin actions
-        gl.signal_manager.trigger_signal(signal=Signals.ChangePage, controller=self, old_path=old_path, new_path=self.active_page.json_path)
 
         log.info(f"Loading page {page.get_name()} on deck {self.deck.get_serial_number()} took {time.time() - start} seconds")
 
@@ -583,17 +543,6 @@ class DeckController:
         for i in range(self.deck.key_count()):
             self.deck.set_key_image(i, native_image)
 
-    def get_own_key_grid(self) -> KeyGrid:
-        # Why not just lru_cache this? Because this would also cache the None that gets returned while the ui is still loading
-        if self.own_key_grid is not None:
-            return self.own_key_grid
-        
-        deck_stack_child = self.get_own_deck_stack_child()
-        if deck_stack_child == None:
-            return
-        
-        self.own_key_grid = deck_stack_child.page_settings.grid_page
-        return deck_stack_child.page_settings.grid_page
     
     def clear_media_player_tasks(self):
         self.media_player_tasks.clear()
@@ -1223,24 +1172,7 @@ class ControllerKey:
         if update:
             self.update()
 
-    def set_ui_key_image(self, image: Image.Image) -> None:
-        if image is None:
-            return
-        
-        x, y = self.deck_controller.index_to_coords(self.key)
-        
-        if self.deck_controller.get_own_key_grid() is None:
-            # Save to use later
-            self.deck_controller.ui_grid_buttons_changes_while_hidden[(y, x)] = image # The ui key coords are in reverse order
-        else:
-            # self.get_own_key_grid().buttons[y][x].set_image(pixbuf)
-            GLib.idle_add(self.deck_controller.get_own_key_grid().buttons[y][x].set_image, image)
-        
-    def get_own_ui_key(self) -> KeyButton:
-        x, y = self.deck_controller.index_to_coords(self.key)
-        buttons = self.deck_controller.get_own_key_grid().buttons # The ui key coords are in reverse order
-        return buttons[x][y]
-    
+
     def get_own_actions(self) -> list["ActionBase"]:
         active_page = self.deck_controller.active_page
         if active_page is None:
@@ -1289,6 +1221,7 @@ class ControllerKey:
                 future.result()
 
     def own_actions_key_down(self) -> None:
+        print(self.get_own_actions())
         for action in self.get_own_actions():
             action.on_key_down()
 
